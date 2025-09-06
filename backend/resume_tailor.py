@@ -1,0 +1,97 @@
+from groq import Groq
+from config import GROQ_API_KEY
+
+client = GROQ_API_KEY
+
+job_description = """
+We are looking for an AI developer skilled in Python, NLP, and LangChain.
+"""
+
+resume_text = """
+Abdul Basit
+Budapest, HU | P: +36 706723783 | malik.basit3690@gmail.com
+                                                https://www.linkedin.com/in/basit3690   | https://github.com/Malik22G
+
+SUMMARY
+
+
+Computer Science student with practical programming and teaching experience, eager to support research projects and course preparation in digital industrial service systems. Proven ability in technical development and instruction, with strong proficiency in Office programs and knowledge of Java, Python, and LaTeX. Passionate about information systems, business process management, and contributing to innovative academic research and publications.
+
+EDUCATION	
+
+
+Eötvös Loránd University	Budapest, HU
+Bachelor of Science	 Sep 2022 - July 2025
+Major in Computer Science 
+Cumulative GPA: 4.71/5.0
+Relevant Coursework: Introduction to Probability and Statistics; Machine Learning; Algorithms; Business fundamentals
+
+WORK EXPERIENCE	
+
+
+NEERY		Budapest, HU
+Web Developer	Dec 2023 – March 2024
+Developed and maintained full-stack web applications using React for the frontend and Java (Spring Boot) for the backend, improving performance and scalability.
+Built CI/CD pipelines using GitLab CI to deploy microservices to AWS EC2, reducing deployment time by 70%.
+Led the backend integration of RESTful APIs using Spring Boot with OpenAPI documentation via Swagger.
+Worked in an agile team environment using Jira and GitLab for task tracking and collaboration.
+
+Eötvös Loránd University Faculty of Informatics 	Budapest, HU
+ Object-Oriented Programming Instructor	Feb 2025 – July 2025
+Taught OOP principles to 16+ students weekly, achieving a 100% pass rate and helping the class reach an 80% average through personalized mentoring and practical design exercises.
+Guided students in implementing object-oriented programming concepts in Java by designing and developing real applications and modular system architectures, reinforcing best practices in encapsulation, inheritance, and polymorphism.
+
+
+UNIVERSITY PROJECTS	
+
+
+Sentiment Analysis Dashboard	Jan 2025 - April 2025 
+Developed a real-time analytics dashboard using FastAPI and Hugging Face Transformers; deployed using Docker on AWS. Visualized data with Chart.js. Integrated Redis as a caching layer (proof of concept). Added Prometheus for basic performance metrics
+Fine-tuned transformer-based NLP models (BERT, RoBERTa, DistilBERT, and DeBERTa) on YouTube comment data for public sentiment classification; achieved an F1 score of 83.7 on the validation set.
+Integrated model inference into a FastAPI backend and visualized sentiment trends via Chart.js and custom dashboards.
+Explored prompt-based text summarization and laid groundwork for RAG-style retrieval using FAISS (prototype stage).
+
+Safari Game project	Feb 2025
+Developed and tested a safari simulation game using Python: Pygame and Pytest in a team of 4 members.
+Collaborated using GitLab for version control and task coordination.
+
+
+Scalable Data Systems	
+Designed and deployed a real-time sentiment analysis system using FastAPI, Docker, and AWS, capable of handling thousands of requests with NLP model inference and trend visualization.
+Optimized backend logic for scalable microservice performance using asynchronous Python and REST principles.
+Currently exploring batch/stream processing with Kafka and distributed task queues (Celery, RabbitMQ) for personal projects.
+
+
+ADDITIONAL	
+Programming and Software Development:  •  Java, Python, R,  Javascript, TypeScript, Haskell, Spring Boot, JUnit, NextJS, React, Jest, HTML/CSS, FastAPI
+MS Office: Office Programs, Word, Excel, PowerPoint
+Research & Domain Expertise: Information Systems, Scientific Work Experience, LaTeX (document preparation, publications)
+Collaboration & Tools: Jira, GitHub, Bash Scripting
+Languages: Fluent in English; Native Proficiency in Urdu, Punjabi
+Certifications & Training: The Web Developer Bootcamp (Udemy); Python for Data Science AI & Development (IBM Coursera); Supervised Machine Learning (Coursera); Algorithmic Toolbox (Coursera)
+Awards: Stipendium Hungaricum Merit Scholarship (2022); Ehsaas Undergraduate Scholarship (2021)
+
+ACTIVITIES	
+Erasmus+ Youth Exchange: Never Give Up	Lodz, PL
+Youth Worker	April 2023
+
+"""
+
+prompt = f"""
+Here is my resume:
+
+{resume_text}
+
+Here is the job description:
+
+{job_description}
+
+Rewrite my resume to highlight the most relevant skills and experiences.
+"""
+
+response = client.chat.completions.create(
+    model="meta-llama/llama-4-scout-17b-16e-instruct",  
+    messages=[{"role": "user", "content": prompt}]
+)
+
+print(response.choices[0].message.content)

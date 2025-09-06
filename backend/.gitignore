@@ -1,0 +1,11 @@
+__pycache__/
+/data/
+venv/
+config.__pycache__
+results/final_resume.aux
+results/final_resume.out
+results/final_resume.log
+results/final_resume.aux
+results/final_resume_fixed.pdf
+results/final_resume.pdf
+results/*
