@@ -1,0 +1,64 @@
+Here is a rewritten version of your resume, tailored to highlight the most relevant skills and experiences for the AI developer position:
+
+**Abdul Basit**
+**Budapest, HU | P: +36 70 672 3783 | malik.basit3690@gmail.com**
+**https://www.linkedin.com/in/basit3690 | https://github.com/Malik22G**
+
+**SUMMARY**
+
+Highly motivated AI developer with expertise in Python, NLP, and a strong passion for innovative research and development. Proficient in designing and implementing AI-powered solutions, with a focus on natural language processing, machine learning, and information systems.
+
+**EDUCATION**
+
+* **Eötvös Loránd University**, Budapest, HU
+	+ Bachelor of Science in Computer Science (Sep 2022 - July 2025)
+	+ Cumulative GPA: 4.71/5.0
+	+ Relevant Coursework: Machine Learning, Algorithms, Business Fundamentals, Introduction to Probability and Statistics
+
+**WORK EXPERIENCE**
+
+* **NEERY**, Budapest, HU
+	+ Web Developer (Dec 2023 - March 2024)
+	+ Developed and maintained full-stack web applications using React, Java (Spring Boot), and GitLab CI
+	+ Built CI/CD pipelines and deployed microservices to AWS EC2, reducing deployment time by 70%
+* **Eötvös Loránd University Faculty of Informatics**, Budapest, HU
+	+ Object-Oriented Programming Instructor (Feb 2025 - July 2025)
+	+ Taught OOP principles to 16+ students, achieving a 100% pass rate and 80% average
+
+**UNIVERSITY PROJECTS**
+
+* **Sentiment Analysis Dashboard** (Jan 2025 - April 2025)
+	+ Developed a real-time analytics dashboard using FastAPI, Hugging Face Transformers, and Docker on AWS
+	+ Fine-tuned transformer-based NLP models (BERT, RoBERTa, DistilBERT, and DeBERTa) on YouTube comment data for public sentiment classification (F1 score: 83.7)
+	+ Integrated model inference into a FastAPI backend and visualized sentiment trends via Chart.js and custom dashboards
+* **Scalable Data Systems**
+	+ Designed and deployed a real-time sentiment analysis system using FastAPI, Docker, and AWS, capable of handling thousands of requests with NLP model inference and trend visualization
+
+**SKILLS**
+
+* **Programming**: Python, Java, JavaScript, TypeScript, Haskell, R
+* **NLP**: NLTK, spaCy, Hugging Face Transformers, LangChain
+* **AI/ML**: Machine Learning, Deep Learning, TensorFlow, PyTorch
+* **Development**: FastAPI, Spring Boot, React, NextJS, Jest, HTML/CSS
+* **Tools**: GitHub, GitLab, Jira, Bash Scripting, LaTeX
+* **Languages**: Fluent in English; Native Proficiency in Urdu, Punjabi
+
+**CERTIFICATIONS & TRAINING**
+
+* **The Web Developer Bootcamp** (Udemy)
+* **Python for Data Science AI & Development** (IBM Coursera)
+* **Supervised Machine Learning** (Coursera)
+* **Algorithmic Toolbox** (Coursera)
+
+**AWARDS**
+
+* **Stipendium Hungaricum Merit Scholarship** (2022)
+* **Ehsaas Undergraduate Scholarship** (2021)
+
+I made the following changes to highlight your relevant skills and experiences:
+
+* Emphasized your experience with Python, NLP, and AI/ML in the summary and skills sections
+* Highlighted your projects and experiences related to NLP, machine learning, and information systems
+* Removed less relevant work experience and education details
+* Reorganized the structure to make it more concise and easy to read
+* Added relevant keywords and buzzwords to help your resume pass through applicant tracking systems (ATS) and catch the eye of the hiring manager.
