@@ -29,6 +29,15 @@ from latex_response import (
 # Create FastAPI instance
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://13.53.129.167:3000"],  # Add your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+ 
+
 app.mount("/static", StaticFiles(directory="results"), name="static")
 
 
