@@ -29,6 +29,7 @@ from latex_response import (
 # Create FastAPI instance
 app = FastAPI()
 
+# CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://13.60.54.187:3000"],  # Add your frontend URL
@@ -36,19 +37,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
- 
 
+# Mount static files directory
 app.mount("/static", StaticFiles(directory="results"), name="static")
-
-
-# Add CORS middleware to allow frontend connections
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Add your frontend URL
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Create necessary directories
 os.makedirs("results", exist_ok=True)
@@ -62,8 +53,8 @@ ALLOWED_MIME_TYPES = [
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 ]
 
+# Extract text from uploaded file based on MIME type
 def extract_text_from_upload(file_content: bytes, mime_type: str, filename: str) -> str:
-    """Extract text content from uploaded file based on MIME type."""
     ext = filename.split('.')[-1].lower()
 
     if mime_type == "text/plain" or ext == "txt":
@@ -86,6 +77,7 @@ def extract_text_from_upload(file_content: bytes, mime_type: str, filename: str)
         raise ValueError(f"Unsupported MIME type: {mime_type}")
 
 
+# Background task to clean up files after a delay
 def clean_up_files(files_to_delete: list):
     """Deletes specified files to free up disk space after a delay."""
     async def delete_files():
@@ -95,8 +87,8 @@ def clean_up_files(files_to_delete: list):
                 os.remove(file)
                 print_status(f"Deleted file: {file}", success=True)
 
-    asyncio.create_task(delete_files())
-
+    # Return the async task to be handled by FastAPI's background task management
+    return delete_files()
 
 @app.post("/tailor_resume/")
 async def tailor_resume(
@@ -106,7 +98,6 @@ async def tailor_resume(
 ):
     """
     Endpoint to tailor a resume using the provided job description.
-    Uses the exact same pipeline as latex_response.py.
     Returns URLs to download the tailored LaTeX (.tex) file and compiled PDF.
     """
     try:
@@ -126,7 +117,7 @@ async def tailor_resume(
         resume_content = extract_text_from_upload(file_content, mime_type, resume.filename)
         print_status("Text extracted successfully")
 
-        # Step 4: First LLaMA call - Tailor full resume (header + body)
+        # Step 4: Tailor the full resume (header + body) using the job description
         print_status("Tailoring resume with LLaMA API...")
         latex_draft = tailor_resume_content(resume_content, job_desc)
         
@@ -139,8 +130,6 @@ async def tailor_resume(
 
         # Step 5: Load LaTeX template
         template_path = "data/template.tex"
-        
-        # Check if template exists
         if not os.path.exists(template_path):
             raise HTTPException(status_code=500, detail="LaTeX template not found")
         
@@ -148,11 +137,11 @@ async def tailor_resume(
         template_content = load_file(template_path)
         print_status("LaTeX template loaded successfully")
 
-        # Step 6: Second LLaMA call - Insert into template
+        # Step 6: Insert tailored content into LaTeX template
         print_status("Inserting tailored content into template with LLaMA API...")
         final_resume = insert_into_template(template_content, latex_draft)
 
-        # Step 7: Save the final LaTeX file with unique filename
+        # Step 7: Save the final LaTeX file with a unique filename
         final_tex_filename = f"final_resume_{timestamp}.tex"
         final_tex_path = f"results/{final_tex_filename}"
         save_file(final_resume, final_tex_path)
@@ -163,14 +152,14 @@ async def tailor_resume(
         pdf_path = compile_latex_to_pdf(final_tex_path, "results")
         print_status(f"PDF compiled successfully: {pdf_path}")
 
-        # Step 9: Remove blank first page if present
+        # Step 9: Remove the first blank page from the PDF if present
         final_pdf_filename = f"final_resume_fixed_{timestamp}.pdf"
         final_pdf_path = f"results/{final_pdf_filename}"
         remove_blank_first_page(pdf_path, final_pdf_path)
         print_status(f"Final PDF cleaned and saved to {final_pdf_path}")
 
-        # Return URLs to the generated files
-        base_url = "http://127.0.0.1:8000"  # Change this to your actual domain in production
+        # Prepare the response with URLs for downloading the files
+        base_url = "http://13.60.54.187:8000"  # Replace with the actual domain/IP in production
         response = {
             "success": True,
             "tex_url": f"{base_url}/static/{final_tex_filename}",
@@ -182,7 +171,7 @@ async def tailor_resume(
             "message": "Resume tailored successfully!"
         }
 
-        # Schedule the deletion of the temporary files after the response is returned
+        # Schedule the deletion of temporary files after a delay of 5 minutes
         background_tasks.add_task(clean_up_files, [draft_path, final_tex_path, pdf_path])
 
         return response
