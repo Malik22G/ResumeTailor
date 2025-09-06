@@ -4,14 +4,15 @@ FastAPI server that uses latex_response.py functions to tailor resumes.
 Compatible with the existing latex_response.py pipeline.
 """
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import time
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
-
+import shutil
+import asyncio
 
 
 # Import functions from latex_response.py
@@ -54,7 +55,6 @@ ALLOWED_MIME_TYPES = [
 
 def extract_text_from_upload(file_content: bytes, mime_type: str, filename: str) -> str:
     """Extract text content from uploaded file based on MIME type."""
-    # Reusing logic from latex_response.py for extracting text from various formats
     ext = filename.split('.')[-1].lower()
 
     if mime_type == "text/plain" or ext == "txt":
@@ -77,10 +77,23 @@ def extract_text_from_upload(file_content: bytes, mime_type: str, filename: str)
         raise ValueError(f"Unsupported MIME type: {mime_type}")
 
 
+def clean_up_files(files_to_delete: list):
+    """Deletes specified files to free up disk space after a delay."""
+    async def delete_files():
+        await asyncio.sleep(60 * 5)  # Wait 5 minutes before deletion
+        for file in files_to_delete:
+            if os.path.exists(file):
+                os.remove(file)
+                print_status(f"Deleted file: {file}", success=True)
+
+    asyncio.create_task(delete_files())
+
+
 @app.post("/tailor_resume/")
 async def tailor_resume(
     resume: UploadFile = File(...),
     job_desc: str = Form(...),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     """
     Endpoint to tailor a resume using the provided job description.
@@ -149,8 +162,7 @@ async def tailor_resume(
 
         # Return URLs to the generated files
         base_url = "http://127.0.0.1:8000"  # Change this to your actual domain in production
-        
-        return {
+        response = {
             "success": True,
             "tex_url": f"{base_url}/static/{final_tex_filename}",
             "pdf_url": f"{base_url}/static/{final_pdf_filename}",
@@ -160,6 +172,11 @@ async def tailor_resume(
             "draft_tex_filename": draft_filename,
             "message": "Resume tailored successfully!"
         }
+
+        # Schedule the deletion of the temporary files after the response is returned
+        background_tasks.add_task(clean_up_files, [draft_path, final_tex_path, pdf_path])
+
+        return response
 
     except HTTPException:
         raise
