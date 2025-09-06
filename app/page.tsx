@@ -54,7 +54,7 @@ export default function HomePage() {
       formData.append("resume", resumeFile);
       formData.append("job_desc", jobDescription);
 
-      const response = await axios.post("http://13.53.129.167:8000/tailor_resume/", formData, {
+      const response = await axios.post("http://13.60.54.187:8000/tailor_resume/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
