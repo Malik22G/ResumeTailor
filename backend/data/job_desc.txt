@@ -1,0 +1,54 @@
+About the job
+ClickUp is the world’s only all-in-one productivity platform that flexes to the way people want to work. It replaces all individual workplace productivity tools with a single, unified platform that includes project management, document collaboration, whiteboards, spreadsheets, and AI. With our headquarters based in San Diego and a rapidly expanding global presence, we are shaping the future of work. Join our team at ClickUp, one of the fastest-growing SaaS companies worldwide, and help millions of users be more productive - saving them at least one day every week. 🦄 
+Collaboration and partnership are vital to how ClickUp operates. A significant portion of your responsibilities will include working closely with members of the backend team and Integrations team to develop features together. Engineers at ClickUp are also responsible for the quality of their own code, so you will work with a QA counterpart to ensure all edge cases are tested. We’re scaling quickly, so we’re recruiting teammates who share our core values, know how to get sh*t done, and add to our very driven culture. You should be proficient in using one or more of the modern JavaScript frameworks (Angular//Vue/etc.) and have a strong understanding of building reusable components and developing for performance.
+The Role:
+
+
+
+Build features in Angular 2+ while collaborating with designers, engineers, and product
+
+Architect efficient and reusable front-end code that drive the ClickUp user experience
+
+Manage individual project priorities, deadlines and deliverables
+
+Identify and resolve performance and scalability issues
+
+Build and maintain unit and integration tests
+
+Fixing bugs fast and finding robust solutions to tackle hard problems
+
+Follow established practices for maintaining state inside ClickUp
+
+
+Qualifications:
+
+
+
+5+ years working with JavaScript and one or more modern frameworks (Angular 2+ required)
+
+Experience with Redux style state management Ngrs, Typescript, and RxJs
+
+HTML/CSS experience, including concepts like layout, specificity, cross browser compatibility, and accessibility
+
+A strong self-starter, operationally-focused; a problem-solver
+
+Excellent interpersonal, written, and oral communication skills
+
+You’ve mentored teammates on new ways to deepen their technical craft 
+
+ 
+ 
+
+Unsure if you meet all the qualifications of this job description but are deeply excited about the role? We hire based on ambition, grit, and a passion for improving the way people work. If you think ClickUp is the company for you, we encourage you to apply!
+ClickUp was founded on a culture of hard work, consistent growth, and a desire to break norms. We’re a values-driven company and hire based on ambition, merit, and a willingness to do what it takes to succeed. We don’t care where you’re from, what you look like, or who you’re in a relationship with—we hire the best people for the job, and create an environment that supports employees on their journey to do the most exciting work of their lives! ClickUp is an Equal Opportunity Employer, and qualified applicants will receive consideration for employment without regard to race, color, religion, sex, sexual orientation, gender identity, or national origin.
+
+ClickUp collects and processes personal data in accordance with applicable data protection laws.
+
+
+
+If you are a European Job Applicant, see our privacy policy for further details.
+
+If you are a Philippine Job Applicant, see our privacy policy and our Philippine Data Privacy Notice for further details. 
+
+
+Please note we are unable to sponsor or take over sponsorship of an employment visa for roles outside of engineering and product at this time. Sponsorship for engineering and product roles is not guaranteed, but is instead based on the business needs for that specific role at that time. Please reach out to the recruiter with any questions.
