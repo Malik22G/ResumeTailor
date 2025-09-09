@@ -12,12 +12,17 @@ import subprocess
 from pathlib import Path
 
 from groq import Groq
-from config import GROQ_API_KEY
 
 # Extra imports for file handling
 from PyPDF2 import PdfReader, PdfWriter
 from docx import Document
 from pdfminer.high_level import extract_text
+import asposewordscloud
+from asposewordscloud.rest import ApiException
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 
 
@@ -25,7 +30,7 @@ from pdfminer.high_level import extract_text
 
 def call_llama(system_prompt: str, user_prompt: str) -> str:
     """Helper function to call LLaMA API via Groq SDK."""
-    api_key = GROQ_API_KEY
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY environment variable not set")
     
@@ -72,6 +77,44 @@ def save_file(content: str, file_path: str) -> None:
             f.write(content)
     except Exception as e:
         raise RuntimeError(f"Error writing {file_path}: {e}")
+    
+import asposewordscloud
+from asposewordscloud.apis.words_api import WordsApi
+from asposewordscloud.models.requests import ConvertDocumentRequest
+from asposewordscloud.rest import ApiException
+
+def get_aspose_client():
+    client_id = os.getenv("ASPOSE_CLIENT_ID")
+    client_secret = os.getenv("ASPOSE_CLIENT_SECRET")
+    return WordsApi(client_id, client_secret)
+
+def pdf_to_word_aspose(pdf_path: str, output_path: str) -> str:
+    """
+    Convert PDF to Word (DOCX) using Aspose Cloud API.
+    Preserves styles such as headings, underlines, fonts, etc.
+    """
+    api = get_aspose_client()
+
+    try:
+        with open(pdf_path, "rb") as f:
+            # Create request object
+            request = ConvertDocumentRequest(
+                document=f,
+                format="docx"
+            )
+            result = api.convert_document(request)
+
+        # Save result
+        with open(output_path, "wb") as f:
+            f.write(result)
+        
+        print(f"✅ PDF converted to DOCX at {output_path}")
+        return output_path
+
+    except ApiException as e:
+        raise RuntimeError(f"Aspose API conversion failed: {e}")
+
+
 
 
 def print_status(message: str, success: bool = True) -> None:
@@ -149,7 +192,8 @@ CRITICAL REQUIREMENTS:
 - Make sure there is **exactly one space before each number** and no additional space after the digits.
 - Keep the structure professional and tailored to the job description
 - Make sure all the skills mentioned in job description are included
-- Rewrite the work experience so that it aligns with skills required in the job description
+- Rewrite the work experience so that it aligns with skills required in the job description but donot change the title of the job.
+- Donot leave out any experience that is already present.  
 """
 
     user_prompt = f"""Please rewrite this resume (header + body) to align with the job description below.
@@ -163,7 +207,6 @@ JOB DESCRIPTION:
 Output ONLY the tailored resume body in LaTeX (including a header)."""
     
     return call_llama(system_prompt, user_prompt)
-
 
 def insert_into_template(template_content: str, latex_draft: str) -> str:
     """
@@ -195,6 +238,7 @@ RESUME CONTENT TO INSERT:
 Output the complete LaTeX document ready for compilation."""
     
     return call_llama(system_prompt, user_prompt)
+
 
 
 def main():

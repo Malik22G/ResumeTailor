@@ -10,10 +10,18 @@ interface ResumePreviewProps {
   pdfUrl?: string
   onDownloadTex?: () => void
   onDownloadPdf?: () => void
+  onDownloadDoc?: () => void
   className?: string
 }
 
-export function ResumePreview({ latexContent, pdfUrl, onDownloadTex, onDownloadPdf, className }: ResumePreviewProps) {
+export function ResumePreview({
+  latexContent,
+  pdfUrl,
+  onDownloadTex,
+  onDownloadPdf,
+  onDownloadDoc,
+  className,
+}: ResumePreviewProps) {
   if (!latexContent && !pdfUrl) {
     return (
       <Card className={cn("w-full", className)}>
@@ -38,6 +46,12 @@ export function ResumePreview({ latexContent, pdfUrl, onDownloadTex, onDownloadP
               <Button variant="outline" size="sm" onClick={onDownloadTex}>
                 <Download className="h-4 w-4 mr-2" />
                 .tex
+              </Button>
+            )}
+            {onDownloadDoc && (
+              <Button variant="outline" size="sm" onClick={onDownloadDoc}>
+                <Download className="h-4 w-4 mr-2" />
+                .docx
               </Button>
             )}
             {onDownloadPdf && (

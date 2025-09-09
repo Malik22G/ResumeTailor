@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 import shutil
 import asyncio
+from latex_response import pdf_to_word_aspose
 
 
 # Import functions from latex_response.py
@@ -32,7 +33,7 @@ app = FastAPI()
 # CORS middleware to allow frontend connections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://13.60.54.187:3000"],  # Add your frontend URL
+    allow_origins=["http://localhost:3000"],  # Add your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -158,8 +159,20 @@ async def tailor_resume(
         remove_blank_first_page(pdf_path, final_pdf_path)
         print_status(f"Final PDF cleaned and saved to {final_pdf_path}")
 
+         # Optional: Try PDF → DOCX conversion
+        final_docx_filename = f"final_resume_{timestamp}.docx"
+        final_docx_path = f"results/{final_docx_filename}"
+        docx_url = None
+        base_url = "http://localhost:8000"  # Replace with the actual domain/IP in production
+
+        try:
+            pdf_to_word_aspose(final_pdf_path, final_docx_path)
+            docx_url = f"{base_url}/static/{final_docx_filename}"
+            print_status(f"DOCX successfully generated at {final_docx_path}")
+        except Exception as e:
+            print_status(f"⚠️ Word conversion failed: {str(e)}", success=False)
+
         # Prepare the response with URLs for downloading the files
-        base_url = "http://13.60.54.187:8000"  # Replace with the actual domain/IP in production
         response = {
             "success": True,
             "tex_url": f"{base_url}/static/{final_tex_filename}",
@@ -170,6 +183,10 @@ async def tailor_resume(
             "draft_tex_filename": draft_filename,
             "message": "Resume tailored successfully!"
         }
+
+        if docx_url:
+            response["doc_url"] = docx_url
+            response["doc_filename"] = final_docx_filename
 
         # Schedule the deletion of temporary files after a delay of 5 minutes
         background_tasks.add_task(clean_up_files, [draft_path, final_tex_path, pdf_path])

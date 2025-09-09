@@ -18,65 +18,64 @@ export default function HomePage() {
   const [latexContent, setLatexContent] = useState<string>("")
   const [pdfUrl, setPdfUrl] = useState<string>("")
   const [texUrl, setTexUrl] = useState<string>("")
+  const [docUrl, setDocUrl] = useState<string>("")
 
   const canStartProcess = resumeFile && jobDescription.trim() && currentStep === "idle"
 
   const handleTailorResume = async () => {
-    if (!canStartProcess) return;
+    if (!canStartProcess) return
 
     const validMimeTypes = [
-      "application/msword", 
-      "application/pdf", 
-      "text/plain", 
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ];
+      "application/msword",
+      "application/pdf",
+      "text/plain",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ]
 
     // Check if the file has a valid MIME type
     if (resumeFile && !validMimeTypes.includes(resumeFile.type)) {
-      alert("Invalid file type. Please upload a valid .txt, .pdf, or .docx file.");
-      return;
+      alert("Invalid file type. Please upload a valid .txt, .pdf, or .docx file.")
+      return
     }
 
-    setCurrentStep("uploading");
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    setCurrentStep("analyzing");
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setCurrentStep("tailoring");
-    await new Promise((resolve) => setTimeout(resolve, 2500));
-
-    setCurrentStep("compiling");
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setCurrentStep("uploading")
 
     try {
-      const formData = new FormData();
-      formData.append("resume", resumeFile);
-      formData.append("job_desc", jobDescription);
+      const formData = new FormData()
+      formData.append("resume", resumeFile)
+      formData.append("job_desc", jobDescription)
 
-      const response = await axios.post("http://13.60.54.187:8000/tailor_resume/", formData, {
+      setCurrentStep("analyzing")
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
+
+      const response = await axios.post(`${apiBaseUrl}/tailor_resume/`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      });
+      })
+
+      setCurrentStep("tailoring")
 
       // Handle the JSON response containing file URLs or paths
       if (response.data.tex_url && response.data.pdf_url) {
-        setTexUrl(response.data.tex_url);
-        setPdfUrl(response.data.pdf_url);
-        setLatexContent("LaTeX file generated successfully!");
+        setCurrentStep("compiling")
+        setTexUrl(response.data.tex_url)
+        setPdfUrl(response.data.pdf_url)
+        if (response.data.doc_url) {
+          setDocUrl(response.data.doc_url)
+        }
+        setLatexContent("LaTeX file generated successfully!")
+        setCurrentStep("complete")
       } else if (response.data.error) {
-        throw new Error(response.data.error);
+        throw new Error(response.data.error)
       }
-      
-      setCurrentStep("complete");
     } catch (error) {
-      console.error("Error tailoring the resume:", error);
-      setLatexContent("Error generating tailored resume.");
-      setCurrentStep("idle");
-      alert("Error generating tailored resume. Please try again.");
+      console.error("Error tailoring the resume:", error)
+      setLatexContent("Error generating tailored resume.")
+      setCurrentStep("idle")
+      alert("Error generating tailored resume. Please try again.")
     }
-  };
+  }
 
   const handleDownloadTex = () => {
     if (texUrl) {
@@ -92,6 +91,15 @@ export default function HomePage() {
       const a = document.createElement("a")
       a.href = pdfUrl
       a.download = "tailored_resume.pdf"
+      a.click()
+    }
+  }
+
+  const handleDownloadDoc = () => {
+    if (docUrl) {
+      const a = document.createElement("a")
+      a.href = docUrl
+      a.download = "tailored_resume.docx"
       a.click()
     }
   }
@@ -149,7 +157,12 @@ export default function HomePage() {
             <FileUpload
               title="Upload Your Resume"
               description="Upload your current resume in TXT, PDF, or DOCX format"
-              acceptedTypes={["text/plain", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]}
+              acceptedTypes={[
+                "text/plain",
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+              ]}
               onFileUpload={setResumeFile}
               uploadedFile={resumeFile}
             />
@@ -190,6 +203,7 @@ export default function HomePage() {
               pdfUrl={pdfUrl}
               onDownloadTex={handleDownloadTex}
               onDownloadPdf={handleDownloadPdf}
+              onDownloadDoc={handleDownloadDoc}
             />
           </div>
         </div>

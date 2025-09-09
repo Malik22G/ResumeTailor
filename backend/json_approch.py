@@ -4,14 +4,14 @@ import mammoth
 from bs4 import BeautifulSoup
 from docx import Document
 from groq import Groq
-from config import GROQ_API_KEY
 from docx.shared import Pt
 from docx.oxml.ns import qn
+import os
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 # Initialize Groq client
-client = Groq(api_key=GROQ_API_KEY)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 from docx import Document
 
