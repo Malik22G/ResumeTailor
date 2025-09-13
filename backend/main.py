@@ -90,7 +90,7 @@ def clean_up_files(files_to_delete: list):
 
     # Return the async task to be handled by FastAPI's background task management
     return delete_files()
-
+@app.post("/tailor_resume")
 @app.post("/tailor_resume/")
 async def tailor_resume(
     resume: UploadFile = File(...),
@@ -165,7 +165,7 @@ async def tailor_resume(
 
 
         # Prepare the response with URLs for downloading the files
-        base_url = "http://localhost:8000"  # Replace with the actual domain/IP in production
+        base_url = os.getenv("Backend_URL")  # Replace with the actual domain/IP in production
         response = {
             "success": True,
             "tex_url": f"{base_url}/static/{final_tex_filename}",
