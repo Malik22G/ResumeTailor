@@ -225,8 +225,9 @@ CRITICAL REQUIREMENTS:
 - Ensure there is exactly one space before each number, and no additional space after the digits.
 - Maintain proper LaTeX syntax throughout
 - Never add the line "The boilerplate content was inspired by Gayle McDowell."
-- Awalys keep the headings and subheadings bold.
+- Ensure that the subheadings are bold.
 - Keep the date aligned on the right side.
+- Donot insert links on your own.
 """
 
     user_prompt = f"""Please insert the following LaTeX resume content into the provided template.
