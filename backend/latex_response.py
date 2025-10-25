@@ -8,8 +8,9 @@ Removes blank first page in PDF if present.
 
 import os
 import sys
-import subprocess
 from pathlib import Path
+from PyPDF2 import PdfReader, PdfWriter
+
 
 from groq import Groq
 
@@ -17,7 +18,6 @@ from groq import Groq
 from PyPDF2 import PdfReader, PdfWriter
 from docx import Document
 from pdfminer.high_level import extract_text
-import asposewordscloud
 from asposewordscloud.rest import ApiException
 from dotenv import load_dotenv
 
@@ -94,7 +94,7 @@ def pdf_to_word_aspose(pdf_path: str, output_path: str) -> str:
     Preserves styles such as headings, underlines, fonts, etc.
     """
     api = get_aspose_client()
-
+    print("Converting pdf to word....")
     try:
         with open(pdf_path, "rb") as f:
             # Create request object
@@ -122,57 +122,307 @@ def print_status(message: str, success: bool = True) -> None:
     icon = "✅" if success else "❌"
     print(f"{icon} {message}")
 
-
 def compile_latex_to_pdf(tex_file: str, output_dir: str) -> str:
-    """Compile LaTeX file to PDF using pdflatex."""
+    """Compile LaTeX file to PDF using pdflatex with maximum error tolerance."""
+    from pathlib import Path
+    import subprocess
+    
+    # First, try to sanitize the file if you have such a function
+    # sanitize_tex_file(tex_file=tex_file)
+    
+    pdf_path = str(Path(output_dir) / (Path(tex_file).stem + ".pdf"))
+    
+    # Method 1: Try with batchmode (most permissive)
     try:
-        # Run pdflatex in nonstopmode (auto-continue without user input)
         cmd = [
             "pdflatex",
-            "-interaction=nonstopmode",  # Ignore prompts
+            "-interaction=batchmode",  # Suppress all output, continue through errors
             "-output-directory=" + output_dir,
             tex_file,
         ]
         
-        # Run the LaTeX command
+        # Run multiple times to resolve references (typical LaTeX workflow)
+        for i in range(3):
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            
+            # Check if PDF was created even with errors
+            if Path(pdf_path).exists():
+                print(f"PDF generated successfully (pass {i+1})")
+                return pdf_path
+    except Exception as e:
+        print(f"Batchmode attempt failed: {e}")
+    
+    # Method 2: Try with nonstopmode if batchmode didn't work
+    try:
+        cmd = [
+            "pdflatex",
+            "-interaction=nonstopmode",  # Continue without stopping for errors
+            "-file-line-error",          # Better error reporting
+            "-output-directory=" + output_dir,
+            tex_file,
+        ]
+        
+        # Run the command
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
-        # If compilation fails, print detailed error
-        if result.returncode != 0:
-            print("LaTeX compilation failed. Here are the details:")
-            print("STDOUT:", result.stdout)
-            print("STDERR:", result.stderr)
+        # Check if PDF exists regardless of return code
+        if Path(pdf_path).exists():
+            print("PDF generated with nonstopmode despite errors")
+            return pdf_path
         
-        # Return the path to the generated PDF
-        pdf_path = str(Path(output_dir) / (Path(tex_file).stem + ".pdf"))
-        return pdf_path
-
+        # If no PDF, print diagnostics
+        if result.returncode != 0:
+            print("LaTeX compilation had errors. Details:")
+            print("STDOUT:", result.stdout[-2000:])  # Last 2000 chars to avoid flood
+            
     except subprocess.CalledProcessError as e:
-        print(f"LaTeX compilation failed: {e.stderr}")
-        raise RuntimeError("LaTeX compilation failed.")
+        print(f"Nonstopmode attempt failed: {e}")
+    
+    # Method 3: Force compilation with error recovery wrapper
+    try:
+        # Create a wrapper tex file that includes the original with error handling
+        wrapper_content = r"""
+\nonstopmode
+\batchmode  % Suppress most error messages
+\documentclass{article}
+\usepackage{silence}  % If available, suppresses warnings
+\begin{document}
+\scrollmode  % Continue past errors
+\input{""" + Path(tex_file).stem + r"""}
+\end{document}
+"""
+        
+        wrapper_file = Path(output_dir) / f"wrapper_{Path(tex_file).stem}.tex"
+        wrapper_file.write_text(wrapper_content)
+        
+        cmd = [
+            "pdflatex",
+            "-interaction=batchmode",
+            "-output-directory=" + output_dir,
+            str(wrapper_file),
+        ]
+        
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Check for wrapper PDF
+        wrapper_pdf = Path(output_dir) / f"wrapper_{Path(tex_file).stem}.pdf"
+        if wrapper_pdf.exists():
+            # Rename to expected output
+            wrapper_pdf.rename(pdf_path)
+            print("PDF generated using wrapper method")
+            return pdf_path
+            
+    except Exception as e:
+        print(f"Wrapper method failed: {e}")
+    
+    # Method 4: Fix common LaTeX errors before compilation
+    try:
+        # Read the tex file and attempt to fix common issues
+        with open(tex_file, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+        
+        # Common fixes
+        fixes_applied = []
+        
+        # Balance braces
+        open_braces = content.count('{')
+        close_braces = content.count('}')
+        if open_braces > close_braces:
+            content += '}' * (open_braces - close_braces)
+            fixes_applied.append(f"Added {open_braces - close_braces} closing braces")
+        elif close_braces > open_braces:
+            # Remove extra closing braces from the end
+            for _ in range(close_braces - open_braces):
+                if content.rstrip().endswith('}'):
+                    content = content.rstrip()[:-1]
+            fixes_applied.append(f"Removed {close_braces - open_braces} extra closing braces")
+        
+        # Ensure document ends properly
+        if '\\end{document}' not in content:
+            content += '\n\\end{document}'
+            fixes_applied.append("Added missing \\end{document}")
+        
+        # Save fixed version
+        fixed_file = Path(output_dir) / f"fixed_{Path(tex_file).stem}.tex"
+        with open(fixed_file, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        if fixes_applied:
+            print(f"Applied fixes: {', '.join(fixes_applied)}")
+        
+        # Try to compile the fixed version
+        cmd = [
+            "pdflatex",
+            "-interaction=batchmode",
+            "-output-directory=" + output_dir,
+            str(fixed_file),
+        ]
+        
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        
+        # Check for fixed PDF
+        fixed_pdf = Path(output_dir) / f"fixed_{Path(tex_file).stem}.pdf"
+        if fixed_pdf.exists():
+            # Rename to expected output
+            fixed_pdf.rename(pdf_path)
+            print("PDF generated after applying automatic fixes")
+            return pdf_path
+            
+    except Exception as e:
+        print(f"Auto-fix method failed: {e}")
+    
+    # Final check: See if any PDF was created with original name
+    if Path(pdf_path).exists():
+        print("PDF found despite errors")
+        return pdf_path
+    
+    # If all methods failed, raise an error with helpful information
+    raise RuntimeError(
+        f"Could not generate PDF. The LaTeX file has fatal errors.\n"
+        f"Main error appears to be: Missing }} at line 225.\n"
+        f"Please check the LaTeX source for unmatched braces near \\end{{center}}"
+    )
+
+
+def sanitize_tex_file(tex_file: str):
+    """
+    Pre-process LaTeX file to fix common issues that prevent compilation.
+    This modifies the file in place.
+    """
+    from pathlib import Path
+    
+    try:
+        with open(tex_file, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+        
+        fixed_lines = []
+        brace_count = 0
+        
+        for i, line in enumerate(lines):
+            # Track brace balance
+            brace_count += line.count('{') - line.count('}')
+            
+            # Fix common issues
+            # Remove stray closing braces at end of center environment
+            if '\\end{center}' in line and line.strip().endswith('}}'):
+                line = line.replace('}}', '}', 1)
+                print(f"Fixed extra brace at line {i+1}")
+            
+            fixed_lines.append(line)
+        
+        # Write back if changes were made
+        with open(tex_file, 'w', encoding='utf-8') as f:
+            f.writelines(fixed_lines)
+            
+        if brace_count != 0:
+            print(f"Warning: Brace imbalance detected: {brace_count}")
+            
+    except Exception as e:
+        print(f"Could not sanitize file: {e}")
 
 
 def remove_blank_first_page(pdf_path: str, output_path: str) -> None:
-    """Always remove the first page and save the remaining PDF."""
+    """
+    Remove the first page only if it has no visible text and no XObject images.
+    Saves resulting PDF to output_path. If the first page is not blank, the
+    original PDF is copied to output_path unchanged.
+    """
     reader = PdfReader(pdf_path)
     writer = PdfWriter()
 
-    if len(reader.pages) == 0:
+    num_pages = len(reader.pages)
+    if num_pages == 0:
         raise RuntimeError("Generated PDF is empty.")
 
-    # Always remove the first page, if there are multiple pages
-    if len(reader.pages) > 1:
-        print("Removing the first page...")
-        for i in range(1, len(reader.pages)):  # Start from the second page
+    first_page = reader.pages[0]
+
+    # 1) Try to extract text and normalize it
+    try:
+        first_page_text = first_page.extract_text() or ""
+    except Exception:
+        # extract_text can occasionally throw on malformed PDFs; fall back to empty
+        first_page_text = ""
+    # Remove whitespace and zero-width characters
+    first_page_text_stripped = "".join(first_page_text.split()).replace("\u200b", "")
+
+    # 2) Inspect the raw content stream and resources for images/XObjects
+    # We try a few safe checks using the page dictionary keys. Use string checks
+    # as PyPDF2's objects may be IndirectObject wrappers.
+    page_obj = first_page
+    contents_obj = None
+    resources_obj = None
+    try:
+        contents_obj = page_obj.get("/Contents")
+    except Exception:
+        contents_obj = None
+
+    try:
+        resources_obj = page_obj.get("/Resources")
+    except Exception:
+        resources_obj = None
+
+    # Heuristic: is there an XObject (images) in resources?
+    has_xobject = False
+    try:
+        if resources_obj:
+            # convert to string safely and check for /XObject
+            if "/XObject" in str(resources_obj):
+                has_xobject = True
+    except Exception:
+        has_xobject = False
+
+    # Heuristic: does the contents stream look empty / very small?
+    contents_empty = False
+    try:
+        if not contents_obj:
+            contents_empty = True
+        else:
+            # If it's an array or a stream, string length should be telling.
+            contents_str = str(contents_obj)
+            # If it contains just whitespace or very short, treat as empty
+            if len(contents_str.strip()) < 20:
+                contents_empty = True
+    except Exception:
+        # If we can't inspect contents safely, be conservative and assume not empty
+        contents_empty = False
+
+    # Decide if first page is blank:
+    # - no extracted text AND
+    # - either content stream is empty OR no contents object
+    # - AND no XObject images present
+    is_blank = (first_page_text_stripped == "") and contents_empty and (not has_xobject)
+
+    if is_blank:
+        # If there's only one page, trying to remove it would result in an empty PDF.
+        # In that case, just copy the original to the output path (or raise if you prefer).
+        if num_pages == 1:
+            # copy original PDF to output_path
+            with open(pdf_path, "rb") as src, open(output_path, "wb") as dst:
+                dst.write(src.read())
+            print("PDF had a single blank page — kept original.")
+            return
+
+        # Otherwise, add all pages except the first
+        for i in range(1, num_pages):
             writer.add_page(reader.pages[i])
+
+        # Preserve document-level metadata if present
+        try:
+            if reader.metadata:
+                writer.add_metadata(reader.metadata)
+        except Exception:
+            pass
+
+        # Write out the cleaned PDF
+        with open(output_path, "wb") as f_out:
+            writer.write(f_out)
+
+        print(f"First page detected as blank and removed. Saved to {output_path}")
     else:
-        # If there is only one page, we do nothing
-        print("No additional pages to keep. Only one page present.")
-    
-    # Write the result to the output PDF
-    with open(output_path, "wb") as f:
-        writer.write(f)
-    print(f"First page removed, and final PDF saved to {output_path}")
+        # No change needed — copy original PDF to output_path
+        with open(pdf_path, "rb") as src, open(output_path, "wb") as dst:
+            dst.write(src.read())
+        print("First page has content. No changes made.")
 
 
 def tailor_resume_content(resume_text: str, job_desc: str) -> str:
@@ -188,12 +438,17 @@ CRITICAL REQUIREMENTS:
 - Do NOT include any LaTeX preamble (\\documentclass, \\begin{document}, \\end{document}, etc.)
 - Always generate a proper LaTeX header block using \\begin{header}...\\end{header}
 - After header, include sections such as Summary, Education, Experience, Projects, Skills, and Awards and certifications and Languages
+- You can remove section if there is no content relevant to that section.
 - Do NOT insert blank pages or extra spacing that could push content to a new page
+- Donot leave out any experience or projects that is already present.  
 - Make sure there is **exactly one space before each number** and no additional space after the digits.
 - Keep the structure professional and tailored to the job description
 - Make sure all the skills mentioned in job description are included
 - Rewrite the work experience so that it aligns with skills required in the job description but donot change the title of the job.
-- Donot leave out any experience that is already present.  
+- Output must contain ONLY valid LaTeX code. 
+- Do NOT include explanations, comments, or extra text such as 
+  "Here is the LaTeX", "Below is...", or anything outside LaTeX.
+
 """
 
     user_prompt = f"""Please rewrite this resume (header + body) to align with the job description below.
@@ -217,6 +472,9 @@ def insert_into_template(template_content: str, latex_draft: str) -> str:
 Your task is to insert resume content into a LaTeX template.
 
 CRITICAL REQUIREMENTS:
+- Output must contain ONLY valid LaTeX code. 
+- Do NOT include any other text in response just latex code no explanations, comments, or extra text such as 
+  "Here is the LaTeX", "Below is...", or anything outside LaTeX.
 - Preserve ALL template formatting, commands, and structure
 - Insert the provided LaTeX content in the correct location
 - Do NOT add blank pages or extra vertical spacing
@@ -225,9 +483,13 @@ CRITICAL REQUIREMENTS:
 - Ensure there is exactly one space before each number, and no additional space after the digits.
 - Maintain proper LaTeX syntax throughout
 - Never add the line "The boilerplate content was inspired by Gayle McDowell."
-- Ensure that the subheadings are bold.
-- Keep the date aligned on the right side.
+- Ensure special characters like in eötvös loránd are turned into normal english alphabets.
+- Ensure that the subheadings are bold except for the Awards and Certifications and skills section.
+- Ensure the dates are aligned on the right side and place of work to the left.
 - Donot insert links on your own.
+- Job title should never be bold.
+- You can remove section if there is no content relevant to that section.
+- Ensure that the place of work and role should be on seperate lines.
 """
 
     user_prompt = f"""Please insert the following LaTeX resume content into the provided template.

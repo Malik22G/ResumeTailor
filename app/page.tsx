@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import axios from "axios"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { FileUpload } from "@/components/file-upload"
 import { JobDescriptionInput } from "@/components/job-description-input"
+import { TemplateSelector } from "@/components/template-selector"
 import { ProgressTracker, type ProcessStep } from "@/components/progress-tracker"
 import { ResumePreview } from "@/components/resume-preview"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -14,11 +15,18 @@ import { Sparkles, FileText, Target, Zap } from "lucide-react"
 export default function HomePage() {
   const [resumeFile, setResumeFile] = useState<File | null>(null)
   const [jobDescription, setJobDescription] = useState<string>("")
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("template1")
   const [currentStep, setCurrentStep] = useState<ProcessStep>("idle")
   const [latexContent, setLatexContent] = useState<string>("")
   const [pdfUrl, setPdfUrl] = useState<string>("")
   const [texUrl, setTexUrl] = useState<string>("")
   const [docUrl, setDocUrl] = useState<string>("")
+
+  useEffect(() => {
+    if (resumeFile || jobDescription || selectedTemplate) {
+      setCurrentStep("idle")
+    }
+  }, [resumeFile, jobDescription, selectedTemplate])
 
   const canStartProcess = resumeFile && jobDescription.trim() && currentStep === "idle"
 
@@ -44,6 +52,7 @@ export default function HomePage() {
       const formData = new FormData()
       formData.append("resume", resumeFile)
       formData.append("job_desc", jobDescription)
+      formData.append("template", selectedTemplate)
 
       setCurrentStep("analyzing")
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -173,6 +182,8 @@ export default function HomePage() {
               onJobDescriptionSubmit={setJobDescription}
               jobDescription={jobDescription}
             />
+
+            <TemplateSelector selectedTemplate={selectedTemplate} onTemplateChange={setSelectedTemplate} />
 
             <Card>
               <CardContent className="p-6">

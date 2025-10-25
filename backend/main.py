@@ -95,6 +95,7 @@ def clean_up_files(files_to_delete: list):
 async def tailor_resume(
     resume: UploadFile = File(...),
     job_desc: str = Form(...),
+    template: str = Form("template1"),
     background_tasks: BackgroundTasks = BackgroundTasks()
 ):
     """
@@ -129,11 +130,19 @@ async def tailor_resume(
         save_file(latex_draft, draft_path)
         print_status(f"Tailored resume draft saved to {draft_path}")
 
-        # Step 5: Load LaTeX template
-        template_path = "data/template.tex"
+
+        # Step 5: Select the LaTeX template based on user choice
+        template_map = {
+            "template1": "data/template1.tex",
+            "template2": "data/template2.tex",
+            "template3": "data/template2.tex"
+
+        }
+        template_path = template_map.get(template, "data/template1.tex")
+
         if not os.path.exists(template_path):
-            raise HTTPException(status_code=500, detail="LaTeX template not found")
-        
+            raise HTTPException(status_code=404, detail=f"Template not found: {template_path}")
+
         print(f"Loading LaTeX template from {template_path}...")
         template_content = load_file(template_path)
         print_status("LaTeX template loaded successfully")
