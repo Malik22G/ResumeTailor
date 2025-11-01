@@ -323,9 +323,8 @@ def sanitize_tex_file(tex_file: str):
 
 def remove_blank_first_page(pdf_path: str, output_path: str) -> None:
     """
-    Remove the first page only if it has no visible text and no XObject images.
-    Saves resulting PDF to output_path. If the first page is not blank, the
-    original PDF is copied to output_path unchanged.
+    Remove the first page if it has no or minimal alphabetic text.
+    Saves resulting PDF to output_path.
     """
     reader = PdfReader(pdf_path)
     writer = PdfWriter()
@@ -336,93 +335,46 @@ def remove_blank_first_page(pdf_path: str, output_path: str) -> None:
 
     first_page = reader.pages[0]
 
-    # 1) Try to extract text and normalize it
+    # Extract text from first page
     try:
         first_page_text = first_page.extract_text() or ""
     except Exception:
-        # extract_text can occasionally throw on malformed PDFs; fall back to empty
         first_page_text = ""
-    # Remove whitespace and zero-width characters
-    first_page_text_stripped = "".join(first_page_text.split()).replace("\u200b", "")
 
-    # 2) Inspect the raw content stream and resources for images/XObjects
-    # We try a few safe checks using the page dictionary keys. Use string checks
-    # as PyPDF2's objects may be IndirectObject wrappers.
-    page_obj = first_page
-    contents_obj = None
-    resources_obj = None
-    try:
-        contents_obj = page_obj.get("/Contents")
-    except Exception:
-        contents_obj = None
+    # Count alphabetic characters
+    alpha_count = sum(c.isalpha() for c in first_page_text)
 
-    try:
-        resources_obj = page_obj.get("/Resources")
-    except Exception:
-        resources_obj = None
-
-    # Heuristic: is there an XObject (images) in resources?
-    has_xobject = False
-    try:
-        if resources_obj:
-            # convert to string safely and check for /XObject
-            if "/XObject" in str(resources_obj):
-                has_xobject = True
-    except Exception:
-        has_xobject = False
-
-    # Heuristic: does the contents stream look empty / very small?
-    contents_empty = False
-    try:
-        if not contents_obj:
-            contents_empty = True
-        else:
-            # If it's an array or a stream, string length should be telling.
-            contents_str = str(contents_obj)
-            # If it contains just whitespace or very short, treat as empty
-            if len(contents_str.strip()) < 20:
-                contents_empty = True
-    except Exception:
-        # If we can't inspect contents safely, be conservative and assume not empty
-        contents_empty = False
-
-    # Decide if first page is blank:
-    # - no extracted text AND
-    # - either content stream is empty OR no contents object
-    # - AND no XObject images present
-    is_blank = (first_page_text_stripped == "") and contents_empty and (not has_xobject)
+    # Consider page blank if it has 5 or fewer alphabetic characters
+    is_blank = alpha_count <= 5
 
     if is_blank:
-        # If there's only one page, trying to remove it would result in an empty PDF.
-        # In that case, just copy the original to the output path (or raise if you prefer).
+        # If there's only one page, keep the original
         if num_pages == 1:
-            # copy original PDF to output_path
             with open(pdf_path, "rb") as src, open(output_path, "wb") as dst:
                 dst.write(src.read())
             print("PDF had a single blank page — kept original.")
             return
 
-        # Otherwise, add all pages except the first
+        # Add all pages except the first
         for i in range(1, num_pages):
             writer.add_page(reader.pages[i])
 
-        # Preserve document-level metadata if present
+        # Preserve metadata if present
         try:
             if reader.metadata:
                 writer.add_metadata(reader.metadata)
         except Exception:
             pass
 
-        # Write out the cleaned PDF
         with open(output_path, "wb") as f_out:
             writer.write(f_out)
 
-        print(f"First page detected as blank and removed. Saved to {output_path}")
+        print(f"First page removed (only {alpha_count} alphabetic characters). Saved to {output_path}")
     else:
-        # No change needed — copy original PDF to output_path
+        # Copy original PDF to output_path
         with open(pdf_path, "rb") as src, open(output_path, "wb") as dst:
             dst.write(src.read())
-        print("First page has content. No changes made.")
+        print(f"First page has {alpha_count} alphabetic characters. No changes made.")
 
 
 def tailor_resume_content(resume_text: str, job_desc: str) -> str:
@@ -448,6 +400,19 @@ CRITICAL REQUIREMENTS:
 - Output must contain ONLY valid LaTeX code. 
 - Do NOT include explanations, comments, or extra text such as 
   "Here is the LaTeX", "Below is...", or anything outside LaTeX.
+
+EXPERIENCE SECTION REQUIREMENTS:
+- Write detailed, comprehensive bullet points for each role (3-5 bullet points per position)
+- Each bullet point should be a complete sentence or detailed phrase (15-25 words minimum)
+- Use the STAR method: describe the Situation/Task, Action taken, and Result/impact achieved
+- Include specific metrics, percentages, numbers, and quantifiable achievements wherever possible
+- Highlight technical skills, tools, and technologies used in context
+- Demonstrate leadership, collaboration, and problem-solving abilities
+- Tailor each bullet point to emphasize skills and experiences relevant to the job description
+- Use strong action verbs (e.g., "Architected", "Spearheaded", "Optimized", "Implemented")
+- Show progression and increasing responsibility across roles
+- Example good bullet point: "Architected and implemented a microservices-based data pipeline processing 2M+ records daily, reducing processing time by 45% and improving system reliability to 99.9% uptime through automated monitoring and failover mechanisms"
+- Example bad bullet point: "Worked on data pipeline" or "Improved system performance"
 
 """
 
@@ -482,14 +447,22 @@ CRITICAL REQUIREMENTS:
 - Ensure the final document compiles to a single-page resume (unless the content is naturally longer)
 - Ensure there is exactly one space before each number, and no additional space after the digits.
 - Maintain proper LaTeX syntax throughout
+- Ensure that empty sections with no content are removed.
 - Never add the line "The boilerplate content was inspired by Gayle McDowell."
 - Ensure special characters like in eötvös loránd are turned into normal english alphabets.
+- Ensure in Awards and Certifications section the bullet points are pectly aligned.
+- Dates should always be aligned to the right and place of work or title to the left.
 - Ensure that the subheadings are bold except for the Awards and Certifications and skills section.
 - Ensure the dates are aligned on the right side and place of work to the left.
 - Donot insert links on your own.
 - Job title should never be bold.
-- You can remove section if there is no content relevant to that section.
 - Ensure that the place of work and role should be on seperate lines.
+
+EMPTY SECTION REMOVAL:
+- Before finalizing, check each \\section{} block
+- If a section contains no items, no bullet points, or only whitespace, remove that entire section
+- Common empty sections to watch for: Awards and Certifications, Languages, Projects
+- The final document should only contain sections with actual content
 """
 
     user_prompt = f"""Please insert the following LaTeX resume content into the provided template.
